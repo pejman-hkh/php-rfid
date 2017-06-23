@@ -55,13 +55,15 @@ class rfid_api {
 			$ip = $this->ip;
 			$port = $this->port;
 		}
-
-		$this->fp = fsockopen( $ip, $port, $errno, $errstr, 30 );
-		stream_set_blocking($this->fp, 0);
+		
+		if( $this->fp = fsockopen( $ip, $port, $errno, $errstr, 5 ) ) {
+			stream_set_timeout($this->fp, 6);	
+		}
+	
 	}
 
 	function get_result( $p = false ) {
-		usleep( 100000 );
+		//usleep( 20000 );
 
 		$data = fread($this->fp, 128);
 
@@ -103,12 +105,14 @@ class rfid_api {
 
 		$res = false;
 
-		if( @ fwrite( $this->fp, $cmd ) ) {
+		if( @fwrite( $this->fp, $cmd ) ) {
 			$res = $this->get_result();		
 		} else {
-			sleep( 1 );
-			unset( $this->fp );
+	
+			//echo "connect again plz ";
+			$this->disconnect();
 			$this->connect();
+			$this->get_data( $t );
 		}
 
 
@@ -136,6 +140,12 @@ class rfid_api {
 	function get_rf_power() {
 		return $this->get_data( [ 0x0A, 0xFF, 0x02, 0x26 ] );
 	}
+
+	function disconnect() {
+		if( @fclose($this->fp) ) return true;
+		return false;
+	}
+
 
 	function __destruct() {
 		fclose($this->fp);
